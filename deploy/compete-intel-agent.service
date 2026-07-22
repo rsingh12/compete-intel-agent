@@ -1,0 +1,29 @@
+[Unit]
+Description=Competitive intelligence run (GCP target)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ci
+WorkingDirectory=/opt/compete-intel-agent
+EnvironmentFile=/etc/gcp-ci/env
+ExecStart=/opt/compete-intel-agent/.venv/bin/python ci_run.py
+
+# A run that hangs on a slow fetch should die, not sit there until Tuesday.
+TimeoutStartSec=1800
+
+# Blast radius. The pipeline writes to exactly two directories and reads the
+# rest. If a prompt injection in a scraped page ever convinces the agent to
+# reach for something, it finds a read-only filesystem.
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+ReadWritePaths=/opt/compete-intel-agent/state /opt/compete-intel-agent/briefs /opt/compete-intel-agent/logs
+
+StandardOutput=append:/opt/compete-intel-agent/logs/run.log
+StandardError=append:/opt/compete-intel-agent/logs/run.log
+
+[Install]
+WantedBy=multi-user.target

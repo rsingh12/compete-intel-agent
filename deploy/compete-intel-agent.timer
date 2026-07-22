@@ -1,0 +1,16 @@
+[Unit]
+Description=Weekly competitive-intelligence run
+
+[Timer]
+# Monday 06:15 local. Not on the hour — every naive cron in the world fires
+# at :00 and you are sharing an outbound IP with your household.
+OnCalendar=Mon *-*-* 06:15:00
+RandomizedDelaySec=900
+
+# The mini PC will be rebooted, patched, and unplugged by someone vacuuming.
+# Persistent=true means a missed run fires on next boot instead of silently
+# skipping a week — which is the failure mode that quietly kills these systems.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

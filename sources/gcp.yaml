@@ -1,0 +1,61 @@
+# Competitor source registry: Google Cloud (competitor) vs AWS (home team)
+# tier drives how aggressively a change gets escalated.
+#   1 = commitment (pricing, GA, SLA, contract terms) -> near-always material
+#   2 = direction  (preview, roadmap, docs restructure) -> material in aggregate
+#   3 = noise floor (marketing, blogs, events) -> only material if it corroborates T1/T2
+
+competitor: Google Cloud
+home_team: AWS
+
+sources:
+  - id: gcp_release_notes_all
+    tier: 1
+    kind: changelog
+    url: https://cloud.google.com/release-notes
+    watch: [GA, deprecated, breaking, price, quota, region]
+
+  - id: gcp_pricing_compute
+    tier: 1
+    kind: pricing
+    url: https://cloud.google.com/compute/all-pricing
+    watch: [committed use, sustained use, spot, egress, per-second]
+
+  - id: gcp_pricing_vertex
+    tier: 1
+    kind: pricing
+    url: https://cloud.google.com/vertex-ai/pricing
+    watch: [per-token, provisioned throughput, batch, Gemini, TPU]
+
+  - id: gcp_tpu_docs
+    tier: 2
+    kind: docs
+    url: https://cloud.google.com/tpu/docs
+    watch: [Ironwood, v7, availability, region, reservation]
+
+  - id: gcp_agentspace
+    tier: 2
+    kind: product
+    url: https://cloud.google.com/products/agentspace
+    watch: [agent, A2A, ADK, connector, enterprise search]
+
+  - id: gcp_blog_ai
+    tier: 3
+    kind: blog
+    url: https://cloud.google.com/blog/products/ai-machine-learning
+    watch: [customer, migration, benchmark, commitment]
+
+  - id: alphabet_earnings
+    tier: 1
+    kind: financial
+    url: https://abc.xyz/investor/
+    watch: [Cloud revenue, backlog, capex, operating margin]
+
+# What AWS counterpart each theme maps to. This is the part that turns
+# "Google shipped a thing" into "here is the seller-facing consequence."
+battlecard_map:
+  compute_price: [EC2, Savings Plans, Graviton]
+  ai_inference_price: [Bedrock, Trainium, Inferentia]
+  accelerator_supply: [Trainium2/3, P5/P6 capacity, Capacity Blocks]
+  agent_platform: [Bedrock AgentCore, Strands, MCP support]
+  data_gravity: [S3, Redshift, Zero-ETL, Glue]
+  egress_terms: [S3 egress, Direct Connect, free-tier egress]

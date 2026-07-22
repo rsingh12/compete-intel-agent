@@ -1,0 +1,26 @@
+# Scrape snapshots and diffs — regenerated every run, and large.
+state/*.json
+state/_candidates.json
+
+# Generated briefs. Keep 2-3 good ones by hand (git add -f) as work samples;
+# don't version the whole stream.
+briefs/*.md
+
+# Review labels are the one thing in state/ worth keeping. Force-add it:
+#   git add -f state/reviews.jsonl
+!state/reviews.jsonl
+
+# Secrets. The pipeline should authenticate via the Claude Code CLI login,
+# NOT an API key in a file — but never let one leak if someone adds it.
+.env
+*.key
+env
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Logs
+logs/
+*.log
