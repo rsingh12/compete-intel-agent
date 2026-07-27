@@ -19,6 +19,7 @@ import argparse
 import asyncio
 import hashlib
 import json
+import os
 import pathlib
 import re
 import sys
@@ -37,6 +38,15 @@ STATE = ROOT / "state"
 BRIEFS = ROOT / "briefs"
 MODEL_TRIAGE = "claude-haiku-4-5-20251001"
 MODEL_ANALYST = "claude-opus-4-8"
+
+# Triage is pure judgment on short text with no tools -- the "lower end of
+# tasks" the README calls out as ideal for a cheap model. That also makes it
+# a fit for a local model on home GPU hardware instead of a paid API call.
+# Only reachable from a run on the same LAN as the Ollama host (e.g. the
+# systemd timer in deploy/), not from the cloud-hosted scheduled routines.
+TRIAGE_BACKEND = os.environ.get("TRIAGE_BACKEND", "claude")   # "claude" | "ollama"
+OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://192.168.86.78:11434")
+OLLAMA_MODEL_TRIAGE = os.environ.get("OLLAMA_MODEL_TRIAGE", "gpt-oss:20b")
 
 
 # ---------------------------------------------------------------- 1. COLLECT
@@ -120,7 +130,16 @@ existing capabilities. Tier 1 sources get benefit of the doubt; tier 3 must
 clear a high bar. Output nothing else."""
 
 
-async def triage(change: dict) -> dict:
+def _parse_verdicts(text: str, added: list[str]) -> list[str]:
+    return [
+        added[int(m.group(1)) - 1]
+        for line in text.splitlines()
+        if (m := re.match(r"\s*(\d+)\|KEEP\|", line))
+        and int(m.group(1)) <= len(added)
+    ]
+
+
+async def triage_claude(change: dict) -> dict:
     numbered = "\n".join(f"{i+1}. {s}" for i, s in enumerate(change["added"]))
     verdicts = []
     async for msg in query(
@@ -135,13 +154,33 @@ async def triage(change: dict) -> dict:
         for block in getattr(msg, "content", []) or []:
             if getattr(block, "text", None):
                 verdicts.append(block.text)
-    kept = [
-        change["added"][int(m.group(1)) - 1]
-        for line in "\n".join(verdicts).splitlines()
-        if (m := re.match(r"\s*(\d+)\|KEEP\|", line))
-        and int(m.group(1)) <= len(change["added"])
-    ]
-    return {**change, "added": kept}
+    return {**change, "added": _parse_verdicts("\n".join(verdicts), change["added"])}
+
+
+async def triage_ollama(change: dict) -> dict:
+    numbered = "\n".join(f"{i+1}. {s}" for i, s in enumerate(change["added"]))
+    async with httpx.AsyncClient(timeout=120) as client:
+        r = await client.post(
+            f"{OLLAMA_HOST}/api/chat",
+            json={
+                "model": OLLAMA_MODEL_TRIAGE,
+                "messages": [
+                    {"role": "system", "content": TRIAGE_PROMPT},
+                    {"role": "user",
+                     "content": f"Source tier {change['tier']} ({change['id']}):\n{numbered}"},
+                ],
+                "stream": False,
+            },
+        )
+        r.raise_for_status()
+    verdict_text = r.json()["message"]["content"]
+    return {**change, "added": _parse_verdicts(verdict_text, change["added"])}
+
+
+def triage_fn():
+    if TRIAGE_BACKEND == "ollama":
+        return triage_ollama
+    return triage_claude
 
 
 # ---------------------------------------------------------------- 3. ANALYZE
@@ -184,10 +223,15 @@ async def analyze(changes: list[dict], registry: dict) -> str:
 # ---------------------------------------------------------------- ORCHESTRATE
 
 async def main() -> int:
+    global TRIAGE_BACKEND
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true",
                     help="collect and diff only; no model calls")
+    ap.add_argument("--triage-backend", choices=["claude", "ollama"],
+                    default=TRIAGE_BACKEND,
+                    help="model backend for triage (default: $TRIAGE_BACKEND or claude)")
     args = ap.parse_args()
+    TRIAGE_BACKEND = args.triage_backend
 
     registry = yaml.safe_load((ROOT / "sources" / "gcp.yaml").read_text())
     STATE.mkdir(exist_ok=True)
@@ -207,9 +251,10 @@ async def main() -> int:
     if args.dry_run or not raw:
         return 0
 
-    triaged = [c for c in await asyncio.gather(*(triage(c) for c in raw))
+    fn = triage_fn()
+    triaged = [c for c in await asyncio.gather(*(fn(c) for c in raw))
                if c["added"]]
-    print(f"[triage] {len(triaged)} sources survived")
+    print(f"[triage backend={TRIAGE_BACKEND}] {len(triaged)} sources survived")
     if not triaged:
         return 0
 
