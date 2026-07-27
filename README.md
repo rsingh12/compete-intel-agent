@@ -68,3 +68,8 @@ Cron:
 - Add an MCP server (Slack, Gmail) to the analyze stage to route the brief.
 - Add a `PostToolUse` hook to log every fetch for audit — useful when the brief
   gets challenged and you need to show provenance.
+- Triage (the cheap-model stage) can run against a local Ollama endpoint
+  instead of Claude Haiku — set `TRIAGE_BACKEND=ollama` (plus `OLLAMA_HOST`
+  and `OLLAMA_MODEL_TRIAGE` if not using the defaults in `ci_run.py`) or pass
+  `--triage-backend ollama`. Only works for a run on the same LAN as the
+  Ollama host; the cloud-scheduled routines can't reach it.
