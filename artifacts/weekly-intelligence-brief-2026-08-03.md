@@ -1,0 +1,30 @@
+## Weekly Brief: AI/ML Competitive Landscape
+**Period:** 2026-07-28 to 2026-08-02 | **Author:** Competitive Intel Pipeline (gcp-analyst) | **Classification:** Internal
+
+> Purpose: the recurring artifact that keeps leadership informed and field teams armed.
+
+### Flash (Action Required)
+- **Nothing new displaces the standing Flash item.** No commitment-tier change surfaced this run. The live action item for reps remains the one first issued 2026-07-23: **Vertex AI retiring 16 open-model MaaS endpoints on Oct 21, 2026** (DeepSeek, Llama 3.3 70B, Qwen3 ×4, GLM, Kimi K2, MiniMax, GPT-OSS, E5 embeddings) — still usable verbatim in any active DeepSeek/Llama/Qwen bake-off, and the retirement date is inside 12 weeks now.
+
+### Priority Updates (This Week)
+- **No material changes detected this period.** Four sources fetched and diffed cleanly this run — Compute Engine pricing, Vertex AI pricing, Agentspace, and the AI/ML blog — returned no findings.
+- **That "no findings" result again needs a cold-start caveat, and it is now a two-run pattern.** This run's `state/` had no prior snapshot for any source — same as the 2026-07-27 run. Per the pipeline's baseline rule, a source's first-ever fetch always writes state and reports nothing, regardless of what actually changed on the page. So for these four sources, "no findings" means *no prior value existed to diff against*, not confirmed stability. This is the second consecutive week this caveat has applied, which means the pipeline has not yet produced a single verified diff on these four sources since the 2026-07-23 baseline brief — the monitoring gap flagged last week has not closed on its own.
+- **Coverage gap on the same three sources as last week, two of them tier 1 — a repeat, not a new incident.** GCP release notes (tier 1), TPU docs (tier 2), and the SEC EDGAR 8-K filing index (tier 1, the earnings trigger) all failed again with `403 Forbidden` at fetch time. This is the identical failure signature reported in the 2026-07-27 brief (`docs.cloud.google.com` and `www.sec.gov` rejected at the outbound proxy). Two runs in a row on the same sources moves this from "one bad day" to a standing blind spot: any GA/deprecation notice on release notes and any new 8-K filing (the only earnings trigger this pipeline has) have now gone unchecked for two consecutive weeks.
+- **Pipeline fix applied this run:** this week's `state/*.json` snapshots are being committed to the repository for the first time (previously excluded via `.gitignore` and never persisted across environments — see last week's Recommended Action #3). If the committed state loads correctly in next week's environment, next run should produce the pipeline's first real diff-based findings instead of another cold-start baseline.
+
+### Strategic Signals (This Quarter)
+Carried forward from 2026-07-23/07-27 — still no new data to confirm, update, or invalidate any of these, because the sources that would move them (release notes, TPU docs, earnings) have now been unreachable for two runs running:
+- **Capex funded externally, not just from free cash flow:** $49.6B raised via stock issuance + $20.3B in senior unsecured notes, earmarked for AI infrastructure. Watch item for sustainability of the capex pace; next real update depends on the earnings source, unreachable for two consecutive weeks.
+- **Model-serving consolidation:** third-party open-model MaaS endpoints being killed while Gemini Flash sampling parameters get locked down — reads as Google trading customer optionality for platform velocity. Still standing until the Oct 21, 2026 retirement date passes.
+- **New TPU generation (tpu7x/8t/8i) positioned as superseding Ironwood**, pricing public ($13.80/chip-hr) but supply/availability still uncorroborated. This is precisely the claim the TPU docs source exists to verify, and that source has now been unreachable for two consecutive runs — treat as still unverified, not stale, but the unverified window is widening.
+- **Security partnership signal:** Cloud NGFW + Palo Alto WildFire — Google buying network-security credibility rather than building it natively. No new information this week.
+
+### Win/Loss Snapshot
+- **Wins this week:** *no data source* | **Losses this week:** *no data source*
+- **Top competitor in losses:** *no data source* | **Common theme:** *no data source*
+- *Gap: this pipeline monitors public GCP surfaces only (pricing pages, release notes, earnings filings). It has no CRM/Salesforce feed, so it cannot populate deal counts, names, or themes. Wiring in a CRM export — a scheduled Salesforce or HubSpot report drop into this pipeline's collect stage — is the specific integration that would close this gap; it does not exist today. (Note: a HubSpot connector is available in this execution environment, but no one has scoped or approved pulling deal data through it — that would need an explicit decision on what fields to pull and where the output goes, not a silent addition to this brief.)*
+
+### Recommended Actions
+1. **Field:** No new material this week — keep leading with the Oct 21, 2026 MaaS retirement list and the Q2 capacity-constraint admission from 2026-07-23; nothing here supersedes it. The retirement date is now under 12 weeks out, worth restating urgency in active bake-offs.
+2. **Pipeline/Ops — escalate:** `docs.cloud.google.com` and `www.sec.gov` have now been 403'd at the outbound proxy for two consecutive runs, blocking 2 of the 7 configured sources (both tier 1). This needs an owner to fix the network policy, not another week of "watch item" — the earnings trigger source in particular means a real 8-K filing could be missed entirely.
+3. **Pipeline/Ops — verify next run:** This run committed `state/*.json` to the repo for the first time to fix the cross-environment cold-start problem identified 2026-07-27. Confirm next week's run actually loads this committed state (rather than re-baselining again) before trusting any "no findings" result as a verified unchanged, not just an absence of comparison data.
