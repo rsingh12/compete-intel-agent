@@ -73,3 +73,11 @@ Cron:
   and `OLLAMA_MODEL_TRIAGE` if not using the defaults in `ci_run.py`) or pass
   `--triage-backend ollama`. Only works for a run on the same LAN as the
   Ollama host; the cloud-scheduled routines can't reach it.
+- `fetch()` sends a real identifying `User-Agent` by default (`CI_USER_AGENT`
+  to override) — SEC EDGAR's fair-access policy 403s anything less. If a
+  source still blocks the request outright (its IP range, not its headers),
+  set `PERPLEXITY_API_KEY` (and optionally `PERPLEXITY_MODEL`, default
+  `sonar`) to fall back to fetching that page via Perplexity instead. That
+  fallback returns synthesized text, not the raw page, so expect one noisy
+  diff the first time it kicks in for a given source — the snapshot is
+  tagged `fetch_method: perplexity_fallback` so it's visible when it happens.

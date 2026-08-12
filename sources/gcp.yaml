@@ -56,7 +56,7 @@ sources:
     # the linked exhibit, not this index page — but that trigger is what
     # actually diffs cleanly, which the old URL never did.
     url: https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001652044&type=8-K&dateb=&owner=include&count=10
-    watch: [2.02, Results of Operations, Cloud revenue, backlog, capex, operating margin]
+    watch: ["2.02", Results of Operations, Cloud revenue, backlog, capex, operating margin]
 
 # What AWS counterpart each theme maps to. This is the part that turns
 # "Google shipped a thing" into "here is the seller-facing consequence."

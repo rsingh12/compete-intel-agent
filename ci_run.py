@@ -48,6 +48,24 @@ TRIAGE_BACKEND = os.environ.get("TRIAGE_BACKEND", "claude")   # "claude" | "olla
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://192.168.86.78:11434")
 OLLAMA_MODEL_TRIAGE = os.environ.get("OLLAMA_MODEL_TRIAGE", "gpt-oss:20b")
 
+# SEC EDGAR's fair-access policy (sec.gov/os/accessing-edgar-data) rejects
+# requests with no identifying User-Agent -- a generic tool name is not
+# enough, it 403s the same as no header at all. This one string fixes that
+# source outright; it's harmless to send to every other source too.
+USER_AGENT = os.environ.get(
+    "CI_USER_AGENT", "compete-intel-agent ravinder.dell.singh@gmail.com")
+
+# Fallback for sources that block direct fetches outright (e.g. a site that
+# blocks the runner's IP range rather than anything about the request) --
+# not a fit for every 403, only ones a header change can't fix. Perplexity
+# fetches from its own infrastructure, not this machine's egress path, so it
+# can reach a page this machine can't. The trade-off: it returns synthesized
+# text, not the raw page, so a diff against a prior *direct* fetch will read
+# as "changed" once on the switchover even if nothing moved -- flagged in
+# the snapshot so triage/analyst can weight it accordingly.
+PERPLEXITY_API_KEY = os.environ.get("PERPLEXITY_API_KEY", "")
+PERPLEXITY_MODEL = os.environ.get("PERPLEXITY_MODEL", "sonar")
+
 
 # ---------------------------------------------------------------- 1. COLLECT
 
@@ -66,17 +84,54 @@ def normalize(html: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
-def fetch(source: dict) -> dict:
-    r = httpx.get(source["url"], timeout=30, follow_redirects=True,
-                  headers={"User-Agent": "ci-monitor/1.0"})
+def _fetch_direct(url: str) -> str:
+    r = httpx.get(url, timeout=30, follow_redirects=True,
+                  headers={"User-Agent": USER_AGENT})
     r.raise_for_status()
-    body = normalize(r.text)
+    return r.text
+
+
+def _fetch_via_perplexity(url: str) -> str:
+    r = httpx.post(
+        "https://api.perplexity.ai/chat/completions",
+        headers={"Authorization": f"Bearer {PERPLEXITY_API_KEY}"},
+        json={
+            "model": PERPLEXITY_MODEL,
+            "messages": [{
+                "role": "user",
+                "content": (
+                    f"Fetch the current content at this exact URL: {url}\n"
+                    "Return only the page's substantive text, as close to "
+                    "verbatim as you can get it. No summary, no commentary, "
+                    "no added formatting."
+                ),
+            }],
+        },
+        timeout=60,
+    )
+    r.raise_for_status()
+    return r.json()["choices"][0]["message"]["content"]
+
+
+def fetch(source: dict) -> dict:
+    fetch_method = "direct"
+    try:
+        html = _fetch_direct(source["url"])
+    except httpx.HTTPStatusError:
+        if not PERPLEXITY_API_KEY:
+            raise
+        html = _fetch_via_perplexity(source["url"])
+        fetch_method = "perplexity_fallback"
+        print(f"[fetch-fallback] {source['id']}: direct fetch blocked, used Perplexity",
+              file=sys.stderr)
+    body = normalize(html)
     return {
         "id": source["id"],
         "tier": source["tier"],
         "url": source["url"],
         "fetched_at": datetime.now(timezone.utc).isoformat(),
         "sha": hashlib.sha256(body.encode()).hexdigest(),
+        "fetch_method": fetch_method,
         "body": body,
     }
 
